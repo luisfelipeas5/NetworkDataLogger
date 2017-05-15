@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">NetworkDataLogger</string>
+    <string name="package_usage_stats_espectial_permission">To generate logs of your network data usage,
+        this app needs a special permission: PACKAGE USAGE STATS.
+        It have to be granted by Settings application of your device.</string>
+    <string name="oh_nice">Oh nice, let me give the permission</string>
+    <string name="not_now">Not now</string>
+</resources>
