@@ -1,23 +1,22 @@
 package br.com.luisfelipeas5.networkdatalogger;
 
 import android.Manifest;
-import android.app.AlertDialog;
-import android.app.usage.NetworkStats;
-import android.app.usage.NetworkStatsManager;
-import android.content.DialogInterface;
-import android.content.Intent;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
-import android.icu.util.Calendar;
-import android.net.ConnectivityManager;
+import android.net.TrafficStats;
 import android.os.Build;
-import android.os.RemoteException;
-import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
@@ -28,7 +27,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        showDialogPermissionExplanation();
+        logNetworkUsage();
     }
 
     @Override
@@ -39,63 +38,49 @@ public class MainActivity extends AppCompatActivity {
                 // If request is cancelled, the result arrays are empty.
                 if (grantResults.length > 0
                         && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    queryNetworkStats();
+                    logNetworkUsage();
                 }
                 break;
         }
 
     }
 
-    private void queryNetworkStats() {
+    private void logNetworkUsage() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            boolean readPhoneStateNotGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE)
-                    != PackageManager.PERMISSION_GRANTED;
-            if (readPhoneStateNotGranted) {
-                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_PHONE_STATE}, REQUEST_CODE_PERMISSIONS);
+            boolean readPhoneStateGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE)
+                    == PackageManager.PERMISSION_GRANTED;
+            boolean writeExternalGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                    == PackageManager.PERMISSION_GRANTED;
+            boolean readExternalGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
+                    == PackageManager.PERMISSION_GRANTED;
+            if (!readPhoneStateGranted || !writeExternalGranted || !readExternalGranted) {
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.READ_PHONE_STATE,
+                                Manifest.permission.READ_EXTERNAL_STORAGE,
+                                Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                        REQUEST_CODE_PERMISSIONS);
             } else {
-                NetworkStatsManager service = getSystemService(NetworkStatsManager.class);
+                File filesDir = getFilesDir();
 
-                Calendar fromCalendar = Calendar.getInstance(Locale.getDefault());
-                fromCalendar.set(2017, 0, 1);
-                long from = fromCalendar.getTimeInMillis();
-
-                Calendar toCalendar = Calendar.getInstance(Locale.getDefault());
-                toCalendar.set(2017, 5, 1);
-                long to = toCalendar.getTimeInMillis();
-
+                Date date = new Date(System.currentTimeMillis());
+                SimpleDateFormat simpleDateFormatter = new SimpleDateFormat("yyyy_MM_dd_HH_mm", Locale.getDefault());
+                File file = new File(filesDir, "report" + simpleDateFormatter.format(date) + ".txt");
                 try {
-                    NetworkStats.Bucket bucket = service.querySummaryForDevice(ConnectivityManager.TYPE_WIFI, null, from, to);
-                    long rxBytes = bucket.getRxBytes();
-                } catch (RemoteException e) {
+                    FileOutputStream fileOutputStream = new FileOutputStream(file);
+                    List<ApplicationInfo> installedApplications = getPackageManager().getInstalledApplications(0);
+                    for(ApplicationInfo app : installedApplications){
+                        String name = app.className;
+                        long tx = TrafficStats.getUidTxBytes(app.uid);
+                        long rx = TrafficStats.getUidRxBytes(app.uid);
+
+                        String output = name + ": total transmitted = " + tx + "; total received = " +
+                                rx;
+                        fileOutputStream.write(output.getBytes());
+                    }
+                } catch (IOException e) {
                     e.printStackTrace();
                 }
             }
         }
-    }
-
-    private void showDialogPermissionExplanation() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setMessage(R.string.package_usage_stats_espectial_permission);
-        builder.setPositiveButton(R.string.oh_nice, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS));
-                }
-            }
-        });
-        builder.setNeutralButton(R.string.not_now, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                queryNetworkStats();
-            }
-        });
-        builder.setOnCancelListener(new DialogInterface.OnCancelListener() {
-            @Override
-            public void onCancel(DialogInterface dialog) {
-                queryNetworkStats();
-            }
-        });
-        builder.show();
     }
 }
