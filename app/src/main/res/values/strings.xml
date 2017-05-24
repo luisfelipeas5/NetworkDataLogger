@@ -5,4 +5,10 @@
         It have to be granted by Settings application of your device.</string>
     <string name="oh_nice">Oh nice, let me give the permission</string>
     <string name="not_now">Not now</string>
+    <string name="transmitted_label">Tx</string>
+    <string name="received_label">Rx</string>
+    <string name="value">%d</string>
+    <string name="export">export</string>
+    <string name="no_data_to_export">No data to export</string>
+    <string name="name_label">name</string>
 </resources>

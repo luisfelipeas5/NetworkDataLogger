@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <data>
+        <variable
+            name="appData"
+            type="br.com.luisfelipeas5.networkdatalogger.model.AppData"/>
+    </data>
+
+    <LinearLayout
+        android:padding="16dp"
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <TextView android:id="@+id/txt_short_name"
+            android:text="@{appData.shortName}"
+            android:textSize="16sp"
+            android:textColor="@color/colorPrimaryDark"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <TextView android:id="@+id/txt_name"
+            android:text="@{appData.name}"
+            android:textSize="12sp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <RelativeLayout android:id="@+id/layout_transmitted"
+            android:layout_marginTop="10dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <TextView android:id="@+id/txt_transmitted_label"
+                android:text="@string/transmitted_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+
+            <ProgressBar android:id="@+id/progress_bar_transmitted"
+                style="?android:progressBarStyleHorizontal"
+                android:layout_toEndOf="@id/txt_transmitted_label"
+                android:layout_toRightOf="@id/txt_transmitted_label"
+                android:layout_marginStart="10dp"
+                android:layout_marginLeft="10dp"
+                android:layout_marginEnd="10dp"
+                android:layout_marginRight="10dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <TextView android:id="@+id/txt_transmitted"
+                android:layout_below="@id/progress_bar_transmitted"
+                android:text="@{@string/value(appData.transmitted)}"
+                android:textColor="@color/colorPrimaryDark"
+                android:layout_alignParentEnd="true"
+                android:layout_alignParentRight="true"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+
+        </RelativeLayout>
+
+        <RelativeLayout android:id="@+id/layout_received"
+            android:layout_marginTop="10dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <TextView android:id="@+id/txt_received_label"
+                android:text="@string/received_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+
+            <ProgressBar android:id="@+id/progress_bar_received"
+                style="?android:progressBarStyleHorizontal"
+                android:layout_toEndOf="@id/txt_received_label"
+                android:layout_toRightOf="@id/txt_received_label"
+                android:layout_marginStart="10dp"
+                android:layout_marginLeft="10dp"
+                android:layout_marginEnd="10dp"
+                android:layout_marginRight="10dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <TextView android:id="@+id/txt_received"
+                android:layout_below="@id/progress_bar_received"
+                android:text="@{@string/value(appData.received)}"
+                android:textColor="@color/colorPrimaryDark"
+                android:layout_alignParentEnd="true"
+                android:layout_alignParentRight="true"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+
+        </RelativeLayout>
+
+    </LinearLayout>
+
+</layout>
