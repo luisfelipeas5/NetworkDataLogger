@@ -49,7 +49,7 @@
 
             <TextView android:id="@+id/txt_transmitted"
                 android:layout_below="@id/progress_bar_transmitted"
-                android:text="@{@string/value(appData.transmitted)}"
+                android:text="@{@string/data_bytes(appData.transmitted)}"
                 android:textColor="@color/colorPrimaryDark"
                 android:layout_alignParentEnd="true"
                 android:layout_alignParentRight="true"
@@ -81,7 +81,7 @@
 
             <TextView android:id="@+id/txt_received"
                 android:layout_below="@id/progress_bar_received"
-                android:text="@{@string/value(appData.received)}"
+                android:text="@{@string/data_bytes(appData.received)}"
                 android:textColor="@color/colorPrimaryDark"
                 android:layout_alignParentEnd="true"
                 android:layout_alignParentRight="true"

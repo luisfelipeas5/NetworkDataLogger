@@ -21,15 +21,19 @@ import java.util.LinkedList;
 import java.util.List;
 
 import br.com.luisfelipeas5.networkdatalogger.adapter.AppDataAdapter;
+import br.com.luisfelipeas5.networkdatalogger.comparators.ReceivedComparator;
+import br.com.luisfelipeas5.networkdatalogger.comparators.TransmittedComparator;
 import br.com.luisfelipeas5.networkdatalogger.databinding.ActivityMainBinding;
 import br.com.luisfelipeas5.networkdatalogger.model.AppData;
 
 public class MainActivity extends AppCompatActivity implements SwipeRefreshLayout.OnRefreshListener {
 
     private ActivityMainBinding mBinding;
-    private List<AppData> mAppDataList;
     private Toast mCurrentToast;
     private boolean mRefreshing;
+
+    private List<AppData> mAppDataList; //a list of AppData objects that are in the RecyclerView
+    private OrderBy mOrderBy = OrderBy.TRANSMITTED; //the order that tha AppData list is sorted
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,6 +49,9 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         loadNetworkUsage();
     }
 
+    /**
+     * Prepare the data to list in a asynchronous task. Even if this work were heavy, the task won't freeze the screen
+     */
     private void loadNetworkUsage() {
         new AsyncTask<Void, Void, Void>() {
 
@@ -56,7 +63,8 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
 
             @Override
             protected Void doInBackground(Void... params) {
-                setUpAppDataList();
+                loadAppDataList();
+                sortAppDataList();
                 return null;
             }
 
@@ -64,12 +72,25 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
             protected void onPostExecute(Void aVoid) {
                 super.onPostExecute(aVoid);
                 setRefreshing(false);
-                AppDataAdapter appDataAdapter = new AppDataAdapter(mAppDataList);
-                mBinding.recyclerView.setAdapter(appDataAdapter);
+                inflateViews();
             }
         }.execute();
     }
 
+    private void inflateViews() {
+        long transmittedTotalData = TrafficStats.getTotalTxBytes();
+        mBinding.txtTotalTransmittedData.setText(getString(R.string.total_transmitted_data, transmittedTotalData));
+        long receivedTotalData = TrafficStats.getTotalRxBytes();
+        mBinding.txtTotalReceivedData.setText(getString(R.string.total_received_data, receivedTotalData));
+        //Put in the data in the list
+        AppDataAdapter appDataAdapter = new AppDataAdapter(mAppDataList);
+        mBinding.recyclerView.setAdapter(appDataAdapter);
+    }
+
+    /**
+     * Indicates the screen state
+     * @param refreshing, if true, the data is been prepared to be shown, otherwise the data is already ready
+     */
     private void setRefreshing(final boolean refreshing) {
         mRefreshing = refreshing;
         mBinding.swipeRefreshLayout.post(new Runnable() {
@@ -84,7 +105,10 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         });
     }
 
-    private void setUpAppDataList() {
+    /**
+     * Setup a list of AppData objects by TrafficStats
+     */
+    private void loadAppDataList() {
         List<ApplicationInfo> installedApplications = getPackageManager().getInstalledApplications(0);
         mAppDataList = new LinkedList<>();
         for (ApplicationInfo applicationInfo : installedApplications) {
@@ -97,25 +121,33 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
                 mAppDataList.add(appData);
             }
         }
-        Collections.sort(mAppDataList, new Comparator<AppData>() {
-            @Override
-            public int compare(AppData o1, AppData o2) {
-                long transmitted1 = o1.getTransmitted();
-                long transmitted2 = o2.getTransmitted();
-                if (transmitted1 > transmitted2) {
-                    return -1;
-                } else if (transmitted1 < transmitted2) {
-                    return 1;
-                }
-                return 0;
-            }
-        });
+    }
+
+    /**
+     *  Sort AppDataList by transmitted or received data by app
+     */
+    private void sortAppDataList() {
+        Comparator<AppData> comparator;
+        if (mOrderBy == OrderBy.TRANSMITTED) {
+            comparator = new TransmittedComparator();
+        } else {
+            comparator = new ReceivedComparator();
+        }
+
+        Collections.sort(mAppDataList, comparator);
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater menuInflater = getMenuInflater();
         menuInflater.inflate(R.menu.main_activity, menu);
+
+        MenuItem receivedOrderMenuItem = menu.findItem(R.id.action_received_order);
+        receivedOrderMenuItem.setVisible(mOrderBy != OrderBy.RECEIVED);
+
+        MenuItem transmittedOrderMenuItem = menu.findItem(R.id.action_transmitted_order);
+        transmittedOrderMenuItem.setVisible(mOrderBy != OrderBy.TRANSMITTED);
+
         return true;
     }
 
@@ -126,8 +158,23 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
             case R.id.action_export:
                 exportData();
                 return true;
+
+            case R.id.action_received_order:
+                setOrderBy(OrderBy.RECEIVED);
+                return true;
+
+            case R.id.action_transmitted_order:
+                setOrderBy(OrderBy.TRANSMITTED);
+                return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    private void setOrderBy(OrderBy orderBy) {
+        mOrderBy = orderBy;
+        sortAppDataList();
+        inflateViews();
+        invalidateOptionsMenu();
     }
 
     private void exportData() {
@@ -140,19 +187,24 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
             return;
         }
 
+        StringBuilder textShareBuilder = new StringBuilder();
+
+        textShareBuilder.append(getString(R.string.total_transmitted_data, TrafficStats.getTotalTxBytes())).append("\n")
+                .append(getString(R.string.total_received_data, TrafficStats.getTotalRxBytes())).append("\n")
+                .append("\n");
+
         String nameLabel = getString(R.string.name_label) + ": ";
         String transmittedLabel = getString(R.string.transmitted_label) + ": ";
         String receivedLabel = getString(R.string.received_label) + ": ";
-
-        StringBuilder stringBuilder = new StringBuilder();
         for (AppData appData : mAppDataList) {
-            stringBuilder
+            textShareBuilder
                     .append(nameLabel).append(appData.getName()).append("\n")
                     .append("\t").append(transmittedLabel).append(appData.getTransmitted()).append("\n")
                     .append("\t").append(receivedLabel).append(appData.getReceived()).append("\n")
                     .append("\n");
         }
-        String textToShare = stringBuilder.toString();
+
+        String textToShare = textShareBuilder.toString();
 
         Intent sendIntent = new Intent();
         sendIntent.setAction(Intent.ACTION_SEND);
@@ -166,5 +218,9 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
     @Override
     public void onRefresh() {
         loadNetworkUsage();
+    }
+
+    private enum OrderBy {
+        TRANSMITTED, RECEIVED
     }
 }
